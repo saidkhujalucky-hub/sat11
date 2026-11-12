@@ -6,22 +6,19 @@ const apiFail = (status, message) => { const e = Error(message); e.status = stat
 const equal = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && timingSafeEqual(x, y); };
 
 export function billing(store, env = process.env, now = Date.now) {
-  const mode = env.PAYMENT_MODE || 'manual';
+  const mode = 'off';
   if (!['manual', 'payme', 'demo', 'off'].includes(mode)) throw Error('Invalid PAYMENT_MODE');
   if (mode === 'demo' && env.NODE_ENV === 'production') throw Error('Demo payments are forbidden in production');
   if (mode === 'payme' && (!env.PAYME_MERCHANT_ID || !env.PAYME_KEY || !env.FRONTEND_URL)) throw Error('Payme requires PAYME_MERCHANT_ID, PAYME_KEY and FRONTEND_URL');
   const price = Number(env.PREMIUM_PRICE_UZS || 19000);
   if (!Number.isSafeInteger(price) || price < 1000 || price > 100000000) throw Error('Invalid PREMIUM_PRICE_UZS');
-  const config = () => ({ mode, price, currency: 'UZS', days: 30, autoRenew: false, phone: '+998 95 570 55 66', freeLessons: ['linear', 'transitions'], freeTest: 1 });
+  const config = () => ({ mode, price: 0, currency: 'UZS', days: null, autoRenew: false, freeLessons: ['all'], freeTest: null });
 
   async function subscription(userId) {
-    const paid = (await store.list('orders', { userId, state: 2 })).sort((a, b) => a.performTime - b.performTime || a.id.localeCompare(b.id));
-    let until = 0;
-    for (const o of paid) until = Math.max(until, o.performTime) + o.days * DAY;
-    return { active: until > now(), until: until || null, plan: until > now() ? 'premium' : 'free', autoRenew: false };
+    return { active: true, until: null, plan: 'free', autoRenew: false };
   }
   async function requirePremium(userId) {
-    if (!(await subscription(userId)).active) apiFail(403, 'PREMIUM_REQUIRED');
+    // Legacy access checks remain compatible: all educational features are free.
   }
   function view(o) { return { id: o.id, price: o.amount / 100, days: o.days, created: o.created, state: o.state, provider: o.provider, paidAt: o.performTime || null, cancelledAt: o.cancelTime || null }; }
   async function order(user, lang = 'ru', key = '') {
