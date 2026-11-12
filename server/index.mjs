@@ -87,7 +87,7 @@ async function api(req,res,path){
   if(path==='/billing/config'&&method==='GET')return json(res,200,bill.config());
   if(path==='/payments/payme'&&method==='POST')return json(res,200,await bill.rpc(d,req.headers.authorization));
   if(path==='/catalog'&&method==='GET'){
-    const u=await userOf(req,true),premium=u&&(await bill.subscription(u.id)).active;
+    const u=await userOf(req,true),premium=true;
     return json(res,200,{modules:catalog.modules,variants:catalog.variants.map(v=>({id:v.id,locked:v.id!==1&&!premium,...(v.id===1||premium?{sections:v.sections}:{})}))});
   }
   if(path==='/guest'&&method==='POST'){
